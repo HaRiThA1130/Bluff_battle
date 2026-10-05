@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: bluff-battle-server
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: CLIENT_ORIGIN
+        sync: false

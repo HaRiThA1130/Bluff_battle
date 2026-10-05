@@ -7,6 +7,10 @@ const { Server } = require("socket.io");
 const PORT = Number(process.env.PORT) || 3001;
 const MAX_PLAYERS = 8;
 const TOTAL_ROUNDS = 5;
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const prompts = [
   ["What is something people pretend to understand?", "Cryptocurrency"],
   ["What is the worst thing to hear during a first date?", "I forgot your name"],
@@ -17,10 +21,26 @@ const prompts = [
 const rooms = new Map();
 
 const app = express();
-app.use(cors());
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Origin is not allowed by the server."));
+  },
+};
+
+app.use(cors(corsOptions));
 app.get("/health", (_req, res) => res.json({ ok: true, rooms: rooms.size }));
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+const io = new Server(server, {
+  cors: {
+    ...corsOptions,
+    methods: ["GET", "POST"],
+  },
+});
 
 const cleanName = (name) => String(name || "").trim().replace(/\s+/g, " ").slice(0, 20);
 const cleanCode = (code) => String(code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
@@ -244,4 +264,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => console.log(`Bluff Battle server running on port ${PORT}`));
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Bluff Battle server running on port ${PORT}`);
+});
